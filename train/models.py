@@ -4,7 +4,7 @@ from user.models import User
 
 
 class Station(models.Model):
-    name = models.CharField(max_length=63)
+    name = models.CharField(max_length=63, unique=True)
     latitude = models.FloatField()
     longitude = models.FloatField()
 
@@ -26,7 +26,7 @@ class Route(models.Model):
 
 
 class TrainType(models.Model):
-    name = models.CharField(max_length=63)
+    name = models.CharField(max_length=63, unique=True)
 
     def __str__(self) -> str:
         return self.name
