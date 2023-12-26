@@ -1,4 +1,6 @@
+from django.db import transaction
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from train.models import (
     TrainType,
@@ -90,5 +92,88 @@ class RouteDetailSerializer(serializers.ModelSerializer):
         )
 
 
+class JourneyListSerializer(serializers.ModelSerializer):
+    route = serializers.CharField(source="route.__str__", read_only=True)
+    train = serializers.CharField(source="train.name", read_only=True)
+    train_type = serializers.CharField(
+        source="train.train_type.name", read_only=True
+    )
+    route_id = serializers.PrimaryKeyRelatedField(
+        queryset=Route.objects.all(),
+        write_only=True,
+        source="route",
+    )
+    train_id = serializers.PrimaryKeyRelatedField(
+        queryset=Train.objects.all(),
+        write_only=True,
+        source="train",
+    )
+
+    class Meta:
+        model = Journey
+        fields = (
+            "id",
+            "route",
+            "train",
+            "train_type",
+            "departure_time",
+            "arrival_time",
+            "route_id",
+            "train_id"
+        )
+
+
+class JourneyDetailSerializer(serializers.ModelSerializer):
+    route = RouteSerializer(many=False, read_only=True)
+    train = TrainSerializer(many=False, read_only=True)
+
+    class Meta:
+        model = Journey
+        fields = (
+            "id",
+            "route",
+            "train",
+            "departure_time",
+            "arrival_time",
+        )
+
+
+class TicketSerializer(serializers.ModelSerializer):
+    journey = serializers.CharField(
+        source="journey.route.__str__", read_only=True
+    )
+    departure_time = serializers.DateTimeField(
+        source="journey.departure_time",
+        read_only=True,
+        format="%Y-%m-%d %H:%M"
+    )
+
+    def validate(self, attrs):
+        data = super(TicketSerializer, self).validate(attrs=attrs)
+        Ticket.validate_ticket(
+            attrs["cargo"],
+            attrs["seat"],
+            attrs["journey"].train,
+            ValidationError
+        )
+        return data
+
+    class Meta:
+        model = Ticket
+        fields = ("id", "cargo", "seat", "journey", "departure_time")
+
+
 class OrderSerializer(serializers.ModelSerializer):
-    pass
+    tickets = TicketSerializer(many=True, read_only=False, allow_empty=False)
+    created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
+    class Meta:
+        model = Order
+        fields = ("id", "tickets", "created_at")
+
+    @transaction.atomic()
+    def create(self, validated_data):
+        tickets_data = validated_data.pop("tickets")
+        order = Order.objects.create(**validated_data)
+        for ticket_data in tickets_data:
+            Ticket.objects.create(order=order, **ticket_data)
+        return order
