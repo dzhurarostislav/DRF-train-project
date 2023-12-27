@@ -1,7 +1,7 @@
 from django.db.models import F, Count
 from rest_framework import viewsets
 
-from train.models import TrainType, Train, Station, Route, Journey, Ticket, Order, Crew
+from train.models import TrainType, Train, Station, Route, Journey, Order, Crew
 from train.serializers import (
     TrainTypeSerializer,
     TrainSerializer,
@@ -9,7 +9,10 @@ from train.serializers import (
     RouteSerializer,
     RouteDetailSerializer,
     JourneyListSerializer,
-    JourneyDetailSerializer, TicketSerializer, OrderSerializer, CrewSerializer, CrewDetailSerializer,
+    JourneyDetailSerializer,
+    OrderSerializer,
+    CrewDetailSerializer,
+    CrewListSerializer,
 
 )
 
@@ -70,7 +73,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
 class CrewViewSet(viewsets.ModelViewSet):
-    serializer_class = CrewSerializer
+    serializer_class = CrewListSerializer
     queryset = Crew.objects.prefetch_related("journeys")
 
     def get_serializer_class(self):
