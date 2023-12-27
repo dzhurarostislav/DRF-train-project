@@ -1,5 +1,6 @@
 from django.db.models import F, Count
 from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination
 
 from train.models import TrainType, Train, Station, Route, Journey, Order, Crew
 from train.serializers import (
@@ -34,7 +35,7 @@ class StationViewSet(viewsets.ModelViewSet):
 
 class RouteViewSet(viewsets.ModelViewSet):
     serializer_class = RouteSerializer
-    queryset = Route.objects.select_related("source")
+    queryset = Route.objects.select_related("source", "destination")
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -42,18 +43,24 @@ class RouteViewSet(viewsets.ModelViewSet):
         return self.serializer_class
 
 
+class OrderPagination(PageNumberPagination):
+    page_size = 10
+    max_page_size = 100
+
+
 class JourneyViewSet(viewsets.ModelViewSet):
     serializer_class = JourneyListSerializer
     queryset = Journey.objects.select_related(
         "train__train_type",
         "route__source",
-        "route__destination"
-    ).annotate(
+        "route__destination",
+    ).prefetch_related("tickets").annotate(
         tickets_available=(
-            F("train__cargo_num") * F("train__places_in_cargo")
-            - Count("tickets")
+                F("train__cargo_num") * F("train__places_in_cargo")
+                - Count("tickets")
         )
     )
+    pagination_class = OrderPagination
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -64,6 +71,7 @@ class JourneyViewSet(viewsets.ModelViewSet):
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     queryset = Order.objects.prefetch_related("tickets__journey__train")
+    pagination_class = OrderPagination
 
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
@@ -74,7 +82,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 class CrewViewSet(viewsets.ModelViewSet):
     serializer_class = CrewListSerializer
-    queryset = Crew.objects.prefetch_related("journeys")
+    queryset = Crew.objects.prefetch_related("journeys__route")
 
     def get_serializer_class(self):
         if self.action == "retrieve":

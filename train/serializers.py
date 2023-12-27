@@ -176,7 +176,7 @@ class JourneyCrewSerializer(serializers.ModelSerializer):
 
 
 class CrewListSerializer(serializers.ModelSerializer):
-    journeys = JourneyCrewSerializer
+    journeys = JourneyCrewSerializer(many=True, read_only=True)
 
     class Meta:
         model = Crew
