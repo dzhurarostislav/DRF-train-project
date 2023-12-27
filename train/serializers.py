@@ -108,6 +108,14 @@ class JourneyListSerializer(serializers.ModelSerializer):
         write_only=True,
         source="train",
     )
+    departure_time = serializers.DateTimeField(
+        read_only=False,
+        format="%Y-%m-%d %H:%M"
+    )
+    arrival_time = serializers.DateTimeField(
+        read_only=False,
+        format="%Y-%m-%d %H:%M"
+    )
 
     class Meta:
         model = Journey
@@ -126,6 +134,16 @@ class JourneyListSerializer(serializers.ModelSerializer):
 class JourneyDetailSerializer(serializers.ModelSerializer):
     route = RouteSerializer(many=False, read_only=True)
     train = TrainSerializer(many=False, read_only=True)
+    crew = serializers.StringRelatedField(many=True, read_only=True)
+
+    departure_time = serializers.DateTimeField(
+        read_only=False,
+        format="%Y-%m-%d %H:%M"
+    )
+    arrival_time = serializers.DateTimeField(
+        read_only=False,
+        format="%Y-%m-%d %H:%M"
+    )
 
     class Meta:
         model = Journey
@@ -133,14 +151,33 @@ class JourneyDetailSerializer(serializers.ModelSerializer):
             "id",
             "route",
             "train",
+            "crew",
             "departure_time",
             "arrival_time",
+        )
+
+
+class CrewSerializer(serializers.ModelSerializer):
+    journeys = JourneyListSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Crew
+        fields = (
+            "id",
+            "first_name",
+            "last_name",
+            "journeys"
         )
 
 
 class TicketSerializer(serializers.ModelSerializer):
     journey = serializers.CharField(
         source="journey.route.__str__", read_only=True
+    )
+    journey_id = serializers.PrimaryKeyRelatedField(
+        queryset=Journey.objects.all(),
+        write_only=True,
+        source="journey",
     )
     departure_time = serializers.DateTimeField(
         source="journey.departure_time",
@@ -160,12 +197,22 @@ class TicketSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Ticket
-        fields = ("id", "cargo", "seat", "journey", "departure_time")
+        fields = (
+            "id",
+            "cargo",
+            "seat",
+            "journey",
+            "departure_time",
+            "journey_id"
+        )
 
 
 class OrderSerializer(serializers.ModelSerializer):
     tickets = TicketSerializer(many=True, read_only=False, allow_empty=False)
-    created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
+    created_at = serializers.DateTimeField(
+        format="%Y-%m-%d %H:%M:%S", read_only=True
+    )
+
     class Meta:
         model = Order
         fields = ("id", "tickets", "created_at")

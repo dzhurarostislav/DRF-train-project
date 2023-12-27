@@ -81,7 +81,6 @@ class Journey(models.Model):
         return f"{self.route} departure time: {self.departure_time}"
 
 
-
 class Ticket(models.Model):
     cargo = models.PositiveIntegerField()
     seat = models.PositiveIntegerField()
