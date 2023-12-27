@@ -1,4 +1,6 @@
 from django.db.models import F, Count
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
@@ -91,6 +93,39 @@ class JourneyViewSet(viewsets.ModelViewSet):
             )
 
         return queryset
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "start_date",
+                type=OpenApiTypes.DATE,
+                description="Filter by date. If only start_date parameter was"
+                            " passed you will get data only with start_date"
+                            "date. If end_date parameter was pass you will"
+                            "get data in range between start and end dates."
+                            "example (?start_date=2023-12-28)",
+            ),
+            OpenApiParameter(
+                "end_date",
+                type=OpenApiTypes.DATE,
+                description="Filter in range from start to end."
+                            "example (?start_date=2023-12-01&end_date=2023-"
+                            "12-31",
+            ),
+            OpenApiParameter(
+                "source",
+                type=OpenApiTypes.STR,
+                description="Filter by source name (ex. ?source=Kiyv)",
+            ),
+            OpenApiParameter(
+                "destination",
+                type=OpenApiTypes.STR,
+                description="Filter by destination name (ex. ?source=Kiyv)",
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
