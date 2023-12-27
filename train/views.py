@@ -67,6 +67,31 @@ class JourneyViewSet(viewsets.ModelViewSet):
             return JourneyDetailSerializer
         return self.serializer_class
 
+    def get_queryset(self):
+        start_date = self.request.query_params.get("start_date")
+        end_date = self.request.query_params.get("end_date")
+        source = self.request.query_params.get("source")
+        destination = self.request.query_params.get("destination")
+
+        queryset = self.queryset
+
+        if start_date and not end_date:
+            queryset = queryset.filter(departure_time__date=start_date)
+
+        if start_date and end_date:
+            queryset = queryset.filter(
+                departure_time__range=(start_date, end_date)
+            )
+        if source:
+            queryset = queryset.filter(route__source__name__icontains=source)
+
+        if destination:
+            queryset = queryset.filter(
+                route__destination__name__icontains=destination
+            )
+
+        return queryset
+
 
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
