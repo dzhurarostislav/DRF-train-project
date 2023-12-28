@@ -51,7 +51,7 @@ class StationSerializer(serializers.ModelSerializer):
 
 
 class RouteSerializer(serializers.ModelSerializer):
-    from_to = serializers.SerializerMethodField()
+    from_to = serializers.CharField(source="__str__", read_only=True)
     source_id = serializers.PrimaryKeyRelatedField(
         queryset=Station.objects.all(),
         write_only=True,
@@ -72,10 +72,6 @@ class RouteSerializer(serializers.ModelSerializer):
             "destination_id",
             "distance"
         )
-
-    @staticmethod
-    def get_from_to(obj) -> str:
-        return str(obj)
 
 
 class RouteDetailSerializer(serializers.ModelSerializer):
@@ -100,12 +96,12 @@ class JourneyListSerializer(serializers.ModelSerializer):
         source="train.train_type.name", read_only=True
     )
     route_id = serializers.PrimaryKeyRelatedField(
-        queryset=Route.objects.all(),
+        queryset=Route.objects.select_related("source", "destination"),
         write_only=True,
         source="route",
     )
     train_id = serializers.PrimaryKeyRelatedField(
-        queryset=Train.objects.all(),
+        queryset=Train.objects.select_related("train_type"),
         write_only=True,
         source="train",
     )
@@ -206,7 +202,10 @@ class TicketSerializer(serializers.ModelSerializer):
         source="journey.route.__str__", read_only=True
     )
     journey_id = serializers.PrimaryKeyRelatedField(
-        queryset=Journey.objects.all(),
+        queryset=Journey.objects.select_related(
+            "train__train_type",
+            "route"
+        ),
         write_only=True,
         source="journey",
     )

@@ -1,10 +1,12 @@
+from datetime import datetime, timedelta
+
 from django.db.models import F, Count
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
-from train.models import TrainType, Train, Station, Route, Journey, Order, Crew
+from .models import TrainType, Train, Station, Route, Journey, Order, Crew
 from train.serializers import (
     TrainTypeSerializer,
     TrainSerializer,
@@ -82,7 +84,11 @@ class JourneyViewSet(viewsets.ModelViewSet):
 
         if start_date and end_date:
             queryset = queryset.filter(
-                departure_time__range=(start_date, end_date)
+                departure_time__range=(
+                    start_date,
+                    datetime.strptime(end_date, "%Y-%m-%d").date()
+                    + timedelta(days=1)
+                )
             )
         if source:
             queryset = queryset.filter(route__source__name__icontains=source)
@@ -92,7 +98,7 @@ class JourneyViewSet(viewsets.ModelViewSet):
                 route__destination__name__icontains=destination
             )
 
-        return queryset
+        return queryset.distinct()
 
     @extend_schema(
         parameters=[
@@ -130,11 +136,17 @@ class JourneyViewSet(viewsets.ModelViewSet):
 
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
-    queryset = Order.objects.prefetch_related("tickets__journey__train")
+    queryset = Order.objects.prefetch_related(
+        "tickets__journey__train",
+        "tickets__journey__route",
+        "tickets__journey__route__source",
+    )
     pagination_class = OrderPagination
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
+        queryset = self.queryset
+        queryset = queryset.filter(user=self.request.user)
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
