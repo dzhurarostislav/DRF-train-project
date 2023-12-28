@@ -18,3 +18,4 @@ sqlparse==0.4.4
 tzdata==2023.3
 uritemplate==4.1.1
 psycopg2-binary==2.9.9
+Pillow==10.1.0
